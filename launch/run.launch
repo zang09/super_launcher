@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- CAMERA -->
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video0" />
+    <param name="image_width" value="640" />
+    <param name="image_height" value="480" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="framerate" value="10" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+  </node>
+
+  <!-- GPS -->
+  <node name="novatel"
+        pkg="nodelet" type="nodelet"
+        args="standalone novatel_gps_driver/novatel_gps_nodelet" ns="pwk7">
+    <rosparam>
+      verbose: true
+      connection_type: tcp
+      device: 192.168.1.210:3003
+      imu_rate: 100
+      imu_sample_rate: 100
+      polling_period: 0.1
+      use_binary_messages: true
+      publish_diagnostics: false
+      publish_sync_diagnostic: true
+      publish_time_messages: false
+      publish_imu_messages: true
+      publish_novatel_velocity: false
+      imu_frame_id: imu_link   
+   
+      publish_nmea_messages: false 
+      publish_novatel_positions: true
+      publish_novatel_utm_positions: true
+      publish_novatel_xyz_positions: false
+      frame_id: navsat_link
+    </rosparam>
+  </node>
+
+  <!-- LiDAR -->
+  <arg name="calibration" default="$(find velodyne_pointcloud)/params/VLP16db.yaml"/>
+  <arg name="device_ip" default="" />
+  <arg name="frame_id" default="velodyne" />
+  <arg name="manager" default="$(arg frame_id)_nodelet_manager" />
+  <arg name="max_range" default="130.0" />
+  <arg name="min_range" default="0.4" />
+  <arg name="pcap" default="" />
+  <arg name="port1" default="2368" />
+  <arg name="read_fast" default="false" />
+  <arg name="read_once" default="false" />
+  <arg name="repeat_delay" default="0.0" />
+  <arg name="rpm" default="600.0" />
+  <arg name="gps_time" default="false" />
+  <arg name="cut_angle" default="-0.01" />
+  <arg name="timestamp_first_packet" default="false" />
+  <arg name="laserscan_ring" default="-1" />
+  <arg name="laserscan_resolution" default="0.007" />
+  <arg name="organize_cloud" default="false" />
+
+  <include file="$(find velodyne_driver)/launch/nodelet_manager.launch">
+    <arg name="device_ip" value="$(arg device_ip)"/>
+    <arg name="frame_id" value="$(arg frame_id)"/>
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="model" value="VLP16"/>
+    <arg name="pcap" value="$(arg pcap)"/>
+    <arg name="port" value="$(arg port1)"/>
+    <arg name="read_fast" value="$(arg read_fast)"/>
+    <arg name="read_once" value="$(arg read_once)"/>
+    <arg name="repeat_delay" value="$(arg repeat_delay)"/>
+    <arg name="rpm" value="$(arg rpm)"/>
+    <arg name="gps_time" value="$(arg gps_time)"/>
+    <arg name="cut_angle" value="$(arg cut_angle)"/>
+    <arg name="timestamp_first_packet" value="$(arg timestamp_first_packet)"/>
+  </include>
+
+  <include file="$(find velodyne_pointcloud)/launch/transform_nodelet.launch">
+    <arg name="model" value="VLP16"/>
+    <arg name="calibration" value="$(arg calibration)"/>
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="fixed_frame" value="" />
+    <arg name="target_frame" value="" />
+    <arg name="max_range" value="$(arg max_range)"/>
+    <arg name="min_range" value="$(arg min_range)"/>
+    <arg name="organize_cloud" value="$(arg organize_cloud)"/>
+  </include>
+
+  <include file="$(find velodyne_pointcloud)/launch/laserscan_nodelet.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="ring" value="$(arg laserscan_ring)"/>
+    <arg name="resolution" value="$(arg laserscan_resolution)"/>
+  </include>
+
+  <!-- IMU -->
+  <node name="xsens_mti_node" pkg="xsens_mti_driver" type="xsens_mti_node" output="screen" ns="mti30">
+      <rosparam command="load" file="$(find xsens_mti_driver)/param/xsens_mti_node.yaml" />
+  </node>
+
+</launch>
